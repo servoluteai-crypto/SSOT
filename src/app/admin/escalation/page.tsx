@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SECTIONS } from '../../../../config/sections'
 import { ESCALATION_CONFIG } from '../../../../config/escalation-keywords'
 
@@ -25,6 +25,11 @@ function Label({ children }: { children: React.ReactNode }) {
   )
 }
 
+interface EscalationConfig {
+  contact_name: string
+  contact_email: string
+}
+
 export default function AdminEscalationPage() {
   const activeSections = SECTIONS.filter((s) => s.status === 'active')
   const [selectedSection, setSelectedSection] = useState(activeSections[0]?.id || '')
@@ -32,10 +37,39 @@ export default function AdminEscalationPage() {
   const [keywords, setKeywords] = useState<string[]>([...ESCALATION_CONFIG.keywords])
   const [newKeyword, setNewKeyword] = useState('')
   const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const selectedConfig = SECTIONS.find((s) => s.id === selectedSection)
-  const [contactName, setContactName] = useState(selectedConfig?.escalationContact?.name || '')
-  const [contactEmail, setContactEmail] = useState(selectedConfig?.escalationContact?.email || '')
+  const [contactName, setContactName] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+
+  // Load escalation config from database
+  useEffect(() => {
+    async function loadConfig() {
+      if (!selectedSection) return
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/admin/escalation?sectionId=${selectedSection}`)
+        const data = await res.json()
+        if (data.config) {
+          setContactName(data.config.contact_name)
+          setContactEmail(data.config.contact_email)
+        } else {
+          // Fallback to config file defaults
+          setContactName(selectedConfig?.escalationContact?.name || '')
+          setContactEmail(selectedConfig?.escalationContact?.email || '')
+        }
+      } catch (e) {
+        console.error('Failed to load escalation config:', e)
+        // Fallback to config file defaults
+        setContactName(selectedConfig?.escalationContact?.name || '')
+        setContactEmail(selectedConfig?.escalationContact?.email || '')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadConfig()
+  }, [selectedSection, selectedConfig])
 
   function handleSectionChange(id: string) {
     setSelectedSection(id)

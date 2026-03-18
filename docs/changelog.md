@@ -6,6 +6,21 @@ Format: `[YYYY-MM-DD] — Description`
 
 ---
 
+## [2026-03-16] — Database-backed escalation contacts
+
+### Changed
+- Escalation contact admin panel (`/admin/escalation`) now persists to database instead of config files
+- RAG pipeline (`lib/rag/answerQuestion.ts`) now fetches escalation contacts from database with fallback to config file
+- Admin can change escalation email on-the-fly without requiring deployment
+- All escalation messages now pull from `section_escalation_config` table (database-first, config fallback)
+
+### Added
+- `section_escalation_config` table with section_id (unique), contact_name, contact_email, updated_at
+- GET endpoint to `/api/admin/escalation` to fetch saved config per section
+- RLS policies for escalation config table
+
+---
+
 ## [2026-03-13] — Initial MVP build
 
 ### Added

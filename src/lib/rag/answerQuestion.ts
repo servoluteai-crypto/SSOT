@@ -46,7 +46,29 @@ async function getSystemPrompt(sectionId: string): Promise<string> {
   return `You are an assistant for EHL Experiences. Answer questions only from the provided documents. Never guess. Cite your sources.`
 }
 
-function checkKeywordEscalation(query: string, sectionId: string): string | null {
+async function getEscalationContact(sectionId: string) {
+  const supabase = createServiceRoleClient()
+
+  // Try database first (preferred for admin-configured contacts)
+  const { data: dbConfig } = await supabase
+    .from('section_escalation_config')
+    .select('contact_name, contact_email')
+    .eq('section_id', sectionId)
+    .single()
+
+  if (dbConfig) {
+    return {
+      name: dbConfig.contact_name,
+      email: dbConfig.contact_email,
+    }
+  }
+
+  // Fallback to config file
+  const section = getSectionById(sectionId)
+  return section?.escalationContact || null
+}
+
+async function checkKeywordEscalation(query: string, sectionId: string): Promise<string | null> {
   if (!ESCALATION_CONFIG.enabled) return null
 
   const lowerQuery = query.toLowerCase()
@@ -55,8 +77,7 @@ function checkKeywordEscalation(query: string, sectionId: string): string | null
   )
 
   if (matched) {
-    const section = getSectionById(sectionId)
-    const contact = section?.escalationContact
+    const contact = await getEscalationContact(sectionId)
     if (contact) {
       return `I understand this is an important matter. This is something ${contact.name} would want to speak with you about personally. You can reach them directly at ${contact.email}`
     }
@@ -72,7 +93,7 @@ export async function answerQuestion(
   conversationHistory: Message[]
 ): Promise<AnswerResult> {
   // Step 0: Check keyword escalation (if enabled)
-  const keywordEscalation = checkKeywordEscalation(query, sectionId)
+  const keywordEscalation = await checkKeywordEscalation(query, sectionId)
   if (keywordEscalation) {
     return {
       answer: keywordEscalation,
@@ -98,8 +119,7 @@ export async function answerQuestion(
   })
 
   if (matchError || !chunks || chunks.length === 0) {
-    const section = getSectionById(sectionId)
-    const contact = section?.escalationContact
+    const contact = await getEscalationContact(sectionId)
     const contactMsg = contact
       ? `Please contact ${contact.name} at ${contact.email} for assistance.`
       : 'Please contact your manager for assistance.'
@@ -122,9 +142,9 @@ export async function answerQuestion(
 
   // Step 4: Assemble prompt
   const systemPrompt = await getSystemPrompt(sectionId)
-  const section = getSectionById(sectionId)
-  const escalationInfo = section?.escalationContact
-    ? `\n\nIf you need to escalate, direct the employee to ${section.escalationContact.name} at ${section.escalationContact.email}.`
+  const contact = await getEscalationContact(sectionId)
+  const escalationInfo = contact
+    ? `\n\nIf you need to escalate, direct the employee to ${contact.name} at ${contact.email}.`
     : ''
 
   const contextChunks = chunks
@@ -169,6 +189,6 @@ export async function answerQuestion(
   return {
     answer: answerText,
     citations: uniqueCitations,
-    escalated: answerText.toLowerCase().includes(section?.escalationContact?.email?.toLowerCase() || '___none___'),
+    escalated: answerText.toLowerCase().includes(contact?.email?.toLowerCase() || '___none___'),
   }
 }
