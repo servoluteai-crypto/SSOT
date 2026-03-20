@@ -3,6 +3,8 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { extractText } from 'unpdf'
+import mammoth from 'mammoth'
+import { createCanvas } from '@napi-rs/canvas'
 
 function getOpenAI() {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -10,6 +12,58 @@ function getOpenAI() {
 
 function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+}
+
+async function extractTextViaVision(buffer: Buffer): Promise<string> {
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs' as any)
+
+  const pdf = await getDocument({ data: new Uint8Array(buffer) }).promise
+  const anthropic = getAnthropic()
+  const pageTexts: string[] = []
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum)
+    const viewport = page.getViewport({ scale: 2.0 }) // 2x scale for better OCR quality
+
+    const canvas = createCanvas(Math.round(viewport.width), Math.round(viewport.height))
+    const ctx = canvas.getContext('2d')
+
+    await page.render({
+      canvasContext: ctx as any,
+      viewport,
+    }).promise
+
+    const imageData = canvas.toBuffer('image/png')
+    const base64Image = imageData.toString('base64')
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: 'image/png', data: base64Image },
+            },
+            {
+              type: 'text',
+              text: 'Extract all the text from this document page. Output only the raw text content, preserving structure and line breaks. Do not add commentary, headings, or formatting markers.',
+            },
+          ],
+        },
+      ],
+    })
+
+    const pageText = response.content[0].type === 'text' ? response.content[0].text.trim() : ''
+    if (pageText) pageTexts.push(pageText)
+
+    // Small delay to avoid rate limiting
+    if (pageNum < pdf.numPages) await new Promise(r => setTimeout(r, 200))
+  }
+
+  return pageTexts.join('\n\n')
 }
 
 function* chunkText(text: string, chunkSize = 400): Generator<string> {
@@ -66,9 +120,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
+    const fileName = file.name.toLowerCase()
+    const isPDF = fileName.endsWith('.pdf')
+    const isDocx = fileName.endsWith('.docx')
+
+    if (!isPDF && !isDocx) {
       return NextResponse.json(
-        { error: 'Only PDF files are accepted' },
+        { error: 'Only PDF and DOCX files are accepted' },
         { status: 400 }
       )
     }
@@ -83,12 +141,13 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceRoleClient()
     const buffer = Buffer.from(await file.arrayBuffer())
 
-    // Step 1: Upload PDF to Supabase Storage
+    // Step 1: Upload file to Supabase Storage
     const storagePath = `documents/${sectionId}/${file.name}`
+    const contentType = isPDF ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     const { error: storageError } = await supabase.storage
       .from('documents')
       .upload(storagePath, buffer, {
-        contentType: 'application/pdf',
+        contentType,
         upsert: true,
       })
 
@@ -99,9 +158,39 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 2: Extract text from PDF
-    const { text } = await extractText(new Uint8Array(buffer), { mergePages: true })
-    console.log('PDF Extraction Result:', { filename: file.name, textLength: text.length, firstChars: text.substring(0, 200) })
+    // Step 2: Extract text from PDF or DOCX
+    let text: string
+    let extractionMethod = 'text'
+    if (isPDF) {
+      const { text: pdfText } = await extractText(new Uint8Array(buffer), { mergePages: true })
+      const wordCount = pdfText.trim().split(/\s+/).filter(Boolean).length
+      console.log('PDF Extraction Result:', { filename: file.name, textLength: pdfText.length, wordCount, firstChars: pdfText.substring(0, 200) })
+
+      if (wordCount < 10) {
+        // Text extraction failed — fall back to vision (handles scanned PDFs and image-heavy docs)
+        console.log('PDF text extraction insufficient, falling back to vision extraction…')
+        extractionMethod = 'vision'
+        text = await extractTextViaVision(buffer)
+        console.log('Vision extraction complete:', { wordCount: text.split(/\s+/).filter(Boolean).length })
+      } else {
+        text = pdfText
+      }
+    } else {
+      const result = await mammoth.extractRawText({ buffer })
+      text = result.value
+      if (result.messages.length > 0) {
+        console.log('DOCX Extraction Warnings:', result.messages)
+      }
+      console.log('DOCX Extraction Result:', { filename: file.name, textLength: text.length, firstChars: text.substring(0, 200) })
+    }
+
+    // Guard: reject if no text was extracted even after vision fallback
+    if (!text || text.trim().split(/\s+/).filter(Boolean).length < 10) {
+      return NextResponse.json(
+        { error: 'Could not extract any text from this file, even using vision analysis. The file may be corrupted or contain no readable content.' },
+        { status: 422 }
+      )
+    }
 
     // Step 3: Insert document record before processing chunks
     const { data: doc, error: docError } = await supabase
@@ -196,6 +285,7 @@ export async function POST(request: NextRequest) {
       success: true,
       documentId: doc.id,
       chunkCount: chunkIndex,
+      extractionMethod,
       draftPrompt,
     })
   } catch (error) {

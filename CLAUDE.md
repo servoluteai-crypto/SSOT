@@ -36,13 +36,14 @@
 | [docs/features/chat-interface.md](docs/features/chat-interface.md) | Chat UI component detail |
 | [docs/features/admin-panel.md](docs/features/admin-panel.md) | Admin panel routes and API detail |
 | [docs/features/section-config.md](docs/features/section-config.md) | Config-driven section system detail |
+| [docs/features/analytics.md](docs/features/analytics.md) | Query analytics feature detail |
 
 ---
 
 ## Hard Rules — Never Break These
 
 1. NEVER answer from general knowledge — only from retrieved document chunks
-2. NEVER persist employee conversation content to DB in MVP
+2. NEVER persist employee conversation content to DB in MVP (exception: anonymous query logging in `query_logs` — no user ID, no conversation linkage)
 3. NEVER send automatic emails — escalation = display contact details only
 4. NEVER hardcode navigation sections — always config-driven via `config/sections.ts`
 5. NEVER activate keyword escalation by default — admin must explicitly enable

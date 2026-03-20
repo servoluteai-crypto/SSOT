@@ -59,7 +59,7 @@ export default function AdminDocumentsPage() {
       } else {
         setUploadStatus({
           type: 'success',
-          msg: `Uploaded successfully. ${result.chunkCount} chunks created.${result.draftPrompt ? ' Prompt draft ready — check Prompts tab.' : ''}`,
+          msg: `Uploaded successfully. ${result.chunkCount} chunks created.${result.extractionMethod === 'vision' ? ' (scanned PDF — text extracted via vision)' : ''}${result.draftPrompt ? ' Prompt draft ready — check Prompts tab.' : ''}`,
         })
         loadDocuments()
       }
@@ -80,7 +80,9 @@ export default function AdminDocumentsPage() {
     e.preventDefault()
     setDragOver(false)
     const file = e.dataTransfer.files?.[0]
-    if (file && file.type === 'application/pdf') await uploadFile(file)
+    if (file && (file.type === 'application/pdf' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+      await uploadFile(file)
+    }
   }
 
   async function handleDelete(docId: string, storagePath: string) {
@@ -166,9 +168,9 @@ export default function AdminDocumentsPage() {
                 </svg>
               </div>
               <p style={{ fontSize: '14px', color: 'var(--foreground)', marginBottom: '4px' }}>
-                Drop a PDF here, or <span style={{ color: 'var(--ehl-gold)', textDecoration: 'underline' }}>browse</span>
+                Drop a file here, or <span style={{ color: 'var(--ehl-gold)', textDecoration: 'underline' }}>browse</span>
               </p>
-              <p style={{ fontSize: '12px', color: 'var(--muted)' }}>PDF only · Max 50MB</p>
+              <p style={{ fontSize: '12px', color: 'var(--muted)' }}>PDF or DOCX · Max 50MB</p>
             </>
           )}
         </div>
@@ -176,7 +178,7 @@ export default function AdminDocumentsPage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf"
+          accept=".pdf,.docx"
           onChange={handleFileChange}
           disabled={uploading}
           style={{ display: 'none' }}

@@ -6,7 +6,7 @@
 
 ## Overview
 
-Admins upload PDF documents via the admin panel. The pipeline extracts text, chunks it, generates embeddings, stores everything in Supabase, and auto-drafts a system prompt for admin review. One active document per section at a time.
+Admins upload PDF or DOCX documents via the admin panel. The pipeline extracts text, chunks it, generates embeddings, stores everything in Supabase, and auto-drafts a system prompt for admin review. One active document per section at a time.
 
 ---
 
@@ -17,7 +17,7 @@ POST /api/documents/upload
 Content-Type: multipart/form-data
 
 Fields:
-  file        File    Required. PDF only, max 50MB
+  file        File    Required. PDF or DOCX, max 50MB
   sectionId   string  Required. Must match a section id in config/sections.ts
   uploadedBy  string  Optional. Admin email for audit trail
 ```
@@ -42,14 +42,15 @@ Fields:
 ## Upload Flow
 
 ```
-1. Validate: file present, PDF extension, size ≤ 50MB
+1. Validate: file present, PDF or DOCX extension, size ≤ 50MB
 
-2. Upload PDF to Supabase Storage
+2. Upload file to Supabase Storage
    → path: documents/{sectionId}/{filename}
    → upsert: true (overwrites same filename)
 
-3. Extract text from PDF
-   → library: unpdf (extractText with mergePages: true)
+3. Extract text from PDF or DOCX
+   → PDF: library unpdf (extractText with mergePages: true)
+   → DOCX: library mammoth (extractRawText)
 
 4. Insert document record (is_active = true)
    → if this fails: remove file from storage, return error
@@ -100,7 +101,7 @@ Supabase Storage bucket: documents
 ## Known Limitations / Improvement Areas
 
 - No chunk overlap — could miss context at chunk boundaries
-- Text extraction quality depends on PDF structure (scanned/image PDFs will extract poorly)
+- Text extraction quality depends on file structure (scanned/image PDFs, complex layouts, or embedded content in DOCX may extract poorly)
 - Single active document per section — replacing adds a new doc and marks old ones inactive, then deletes them
-- No progress indicator — long PDFs block the API route until complete (consider background job for large files)
+- No progress indicator — long documents block the API route until complete (consider background job for large files)
 - `uploadedBy` is stored as text, not validated against the admins table

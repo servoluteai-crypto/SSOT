@@ -154,7 +154,11 @@ export async function answerQuestion(
     })
     .join('\n\n---\n\n')
 
-  const fullSystemPrompt = `${systemPrompt}${escalationInfo}\n\n--- DOCUMENT CONTEXT ---\n\n${contextChunks}`
+  const sourceListInstruction = `\n\nAt the very end of your response, on a new line, output exactly this format listing only the source numbers you actually used:
+SOURCES_USED: 1,3,5
+If you used no sources, output: SOURCES_USED: none`
+
+  const fullSystemPrompt = `${systemPrompt}${escalationInfo}${sourceListInstruction}\n\n--- DOCUMENT CONTEXT ---\n\n${contextChunks}`
 
   const messages: Anthropic.MessageParam[] = [
     ...conversationHistory.map((msg) => ({
@@ -172,11 +176,27 @@ export async function answerQuestion(
     messages,
   })
 
-  const answerText =
+  const rawAnswer =
     response.content[0].type === 'text' ? response.content[0].text : ''
 
-  // Step 6: Build citations
-  const citations: Citation[] = chunks.map((c: { chunk_text: string; document_id: string }) => ({
+  // Step 6: Parse sources used and strip the SOURCES_USED line from the answer
+  const sourcesMatch = rawAnswer.match(/SOURCES_USED:\s*([^\n]+)/i)
+  const answerText = rawAnswer.replace(/\n?SOURCES_USED:[^\n]*/i, '').trimEnd()
+
+  const usedSourceIndices = new Set<number>()
+  if (sourcesMatch && sourcesMatch[1].trim().toLowerCase() !== 'none') {
+    for (const part of sourcesMatch[1].split(',')) {
+      const n = parseInt(part.trim(), 10)
+      if (!isNaN(n)) usedSourceIndices.add(n - 1) // convert 1-based to 0-based
+    }
+  }
+
+  // Only cite documents that Claude actually drew from
+  const usedChunks = usedSourceIndices.size > 0
+    ? chunks.filter((_: unknown, i: number) => usedSourceIndices.has(i))
+    : chunks
+
+  const citations: Citation[] = usedChunks.map((c: { chunk_text: string; document_id: string }) => ({
     documentName: docMap.get(c.document_id) || 'Unknown Document',
     chunkText: c.chunk_text.slice(0, 200) + (c.chunk_text.length > 200 ? '...' : ''),
   }))

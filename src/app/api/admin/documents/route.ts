@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { unstable_noStore as noStore } from 'next/cache'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
+  noStore()
   try {
     const { searchParams } = new URL(request.url)
     const sectionId = searchParams.get('sectionId')

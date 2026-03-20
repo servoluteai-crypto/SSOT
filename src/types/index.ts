@@ -42,3 +42,32 @@ export interface MatchedChunk {
   document_id: string
   similarity: number
 }
+
+export interface QueryLog {
+  id: string
+  section_id: string
+  query: string
+  was_escalated: boolean
+  had_results: boolean
+  created_at: string
+}
+
+export interface QueryTopic {
+  topic: string
+  count: number
+  queries: string[]
+}
+
+export interface QueryAnalytics {
+  topTopics: QueryTopic[]
+  totalQueries: number
+  escalationRate: number
+  queriesBySection: {
+    section_id: string
+    count: number
+  }[]
+  queriesByDay: {
+    date: string
+    count: number
+  }[]
+}

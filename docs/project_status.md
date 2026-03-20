@@ -17,7 +17,7 @@
 | 9 | MVP end-to-end testing on mobile + desktop | Not started |
 | 10 | Vercel production deployment | Not started |
 | 11 | Onboarding Hub (post-MVP) | Not started |
-| 12 | Analytics (post-MVP) | Not started |
+| 12 | Analytics — anonymous query logging + admin dashboard | Complete |
 
 ---
 
@@ -34,6 +34,8 @@
 - Supabase Auth for admin routes — login, session cookies, admins table verification
 - Keyword escalation system built (off by default)
 - Auto-generated system prompt drafts on document upload (requires admin activation)
+- Anonymous query logging — every chat question logged (no user ID) for analytics
+- Admin analytics page (`/admin/analytics`) — top questions, section breakdown, daily trend, 7/30/90d filters
 
 ---
 
@@ -49,6 +51,6 @@
 ### Post-launch
 - [ ] Onboarding Hub — video guides by role, progress tracking, requires auth
 - [ ] Per-department admin logins using `section_scope` column
-- [ ] Analytics — most asked questions, escalation rates, knowledge gap identification
+- [x] Analytics — most asked questions, escalation rates, knowledge gap identification
 - [ ] MyZimply deep-link integration
 - [ ] Microsoft Teams bot integration
