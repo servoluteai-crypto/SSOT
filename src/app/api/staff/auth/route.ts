@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
     const { pin } = await request.json()
 
-    const correctPin = process.env.STAFF_PIN
-    if (!correctPin) {
+    const supabase = createServiceRoleClient()
+    const { data, error } = await supabase
+      .from('staff_config')
+      .select('pin')
+      .single()
+
+    if (error || !data) {
       return NextResponse.json(
         { error: 'Staff access not configured on server' },
         { status: 500 }
       )
     }
 
-    if (String(pin).trim() !== String(correctPin).trim()) {
+    if (String(pin).trim() !== String(data.pin).trim()) {
       return NextResponse.json({ error: 'Incorrect PIN' }, { status: 401 })
     }
 
