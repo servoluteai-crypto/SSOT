@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { data: admin, error: adminError } = await dbClient
+    const { data: admin } = await dbClient
       .from('admins')
       .select('id')
       .eq('email', email)

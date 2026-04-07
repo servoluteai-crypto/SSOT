@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-const STAFF_PROTECTED = ['/hr', '/operations']
+const STAFF_PROTECTED = ['/hr', '/operations', '/reviews']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -37,5 +37,7 @@ export const config = {
     '/hr/:path*',
     '/operations',
     '/operations/:path*',
+    '/reviews',
+    '/reviews/:path*',
   ],
 }

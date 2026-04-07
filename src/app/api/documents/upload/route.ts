@@ -15,6 +15,7 @@ function getAnthropic() {
 }
 
 async function extractTextViaVision(buffer: Buffer): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs' as any)
 
   const pdf = await getDocument({ data: new Uint8Array(buffer) }).promise
@@ -29,6 +30,7 @@ async function extractTextViaVision(buffer: Buffer): Promise<string> {
     const ctx = canvas.getContext('2d')
 
     await page.render({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       canvasContext: ctx as any,
       viewport,
     }).promise

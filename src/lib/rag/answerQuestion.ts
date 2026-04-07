@@ -138,7 +138,8 @@ export async function answerQuestion(
     .select('id, filename')
     .in('id', documentIds)
 
-  const docMap = new Map(documents?.map((d: { id: string; filename: string }) => [d.id, d.filename]) || [])
+  // Normalize filenames (collapse multiple spaces) so Claude cites them consistently
+  const docMap = new Map(documents?.map((d: { id: string; filename: string }) => [d.id, d.filename.replace(/\s+/g, ' ').trim()]) || [])
 
   // Step 4: Assemble prompt
   const systemPrompt = await getSystemPrompt(sectionId)
@@ -148,15 +149,17 @@ export async function answerQuestion(
     : ''
 
   const contextChunks = chunks
-    .map((c: { chunk_text: string; document_id: string }, i: number) => {
+    .map((c: { chunk_text: string; document_id: string }) => {
       const docName = docMap.get(c.document_id) || 'Unknown Document'
-      return `[Source ${i + 1}: ${docName}]\n${c.chunk_text}`
+      return `[Source: ${docName}]\n${c.chunk_text}`
     })
     .join('\n\n---\n\n')
 
-  const sourceListInstruction = `\n\nAt the very end of your response, on a new line, output exactly this format listing only the source numbers you actually used:
-SOURCES_USED: 1,3,5
-If you used no sources, output: SOURCES_USED: none`
+  const sourceListInstruction = `\n\nCitation rules:
+- Cite sources using the exact document name in square brackets, e.g. [Employee Handbook SW-MHL-EHL Leisure 2026.pdf]
+- Cite once per paragraph or section block — at the end of the block, not after every sentence or bullet point
+- Only add a new citation when the source changes within a response
+- If an entire section comes from the same document, one citation at the end of that section is enough`
 
   const fullSystemPrompt = `${systemPrompt}${escalationInfo}${sourceListInstruction}\n\n--- DOCUMENT CONTEXT ---\n\n${contextChunks}`
 
@@ -179,32 +182,30 @@ If you used no sources, output: SOURCES_USED: none`
   const rawAnswer =
     response.content[0].type === 'text' ? response.content[0].text : ''
 
-  // Step 6: Parse sources used and strip the SOURCES_USED line from the answer
-  const sourcesMatch = rawAnswer.match(/SOURCES_USED:\s*([^\n]+)/i)
-  const answerText = rawAnswer.replace(/\n?SOURCES_USED:[^\n]*/i, '').trimEnd()
+  // Step 6: Extract cited document names from inline [Doc Name] brackets in the answer
+  const answerText = rawAnswer.trimEnd()
 
-  const usedSourceIndices = new Set<number>()
-  if (sourcesMatch && sourcesMatch[1].trim().toLowerCase() !== 'none') {
-    for (const part of sourcesMatch[1].split(',')) {
-      const n = parseInt(part.trim(), 10)
-      if (!isNaN(n)) usedSourceIndices.add(n - 1) // convert 1-based to 0-based
-    }
-  }
+  const allDocNames = Array.from(new Set<string>(
+    chunks.map((c: { document_id: string }) => docMap.get(c.document_id) || 'Unknown Document')
+  ))
 
-  // Only cite documents that Claude actually drew from
-  const usedChunks = usedSourceIndices.size > 0
-    ? chunks.filter((_: unknown, i: number) => usedSourceIndices.has(i))
-    : chunks
-
-  const citations: Citation[] = usedChunks.map((c: { chunk_text: string; document_id: string }) => ({
-    documentName: docMap.get(c.document_id) || 'Unknown Document',
-    chunkText: c.chunk_text.slice(0, 200) + (c.chunk_text.length > 200 ? '...' : ''),
-  }))
-
-  // Deduplicate citations by document name
-  const uniqueCitations = citations.filter(
-    (c: Citation, i: number, arr: Citation[]) => arr.findIndex((x: Citation) => x.documentName === c.documentName) === i
+  // Find which known doc names appear as inline citations in the answer
+  // Use case-insensitive includes to handle minor casing differences from the model
+  const answerLower = answerText.toLowerCase()
+  const citedDocNames = allDocNames.filter((name) =>
+    answerLower.includes(name.toLowerCase())
   )
+
+  // Fall back to all retrieved docs if Claude cited none
+  const docNamesToShow = citedDocNames.length > 0 ? citedDocNames : allDocNames
+
+  const uniqueCitations: Citation[] = docNamesToShow.map((name) => {
+    const chunk = chunks.find((c: { document_id: string }) => (docMap.get(c.document_id) || 'Unknown Document') === name)
+    return {
+      documentName: name,
+      chunkText: chunk ? chunk.chunk_text.slice(0, 200) + (chunk.chunk_text.length > 200 ? '...' : '') : '',
+    }
+  })
 
   return {
     answer: answerText,

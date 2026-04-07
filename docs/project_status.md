@@ -18,6 +18,7 @@
 | 10 | Vercel production deployment | Not started |
 | 11 | Onboarding Hub (post-MVP) | Not started |
 | 12 | Analytics — anonymous query logging + admin dashboard | Complete |
+| 13 | Review Response Generator (Karlo + Victor voices) | Complete |
 
 ---
 
@@ -36,6 +37,7 @@
 - Auto-generated system prompt drafts on document upload (requires admin activation)
 - Anonymous query logging — every chat question logged (no user ID) for analytics
 - Admin analytics page (`/admin/analytics`) — top questions, section breakdown, daily trend, 7/30/90d filters
+- Review Response Generator (`/reviews`) — paste a review, pick Karlo or Victor, get a draft response. No RAG/embeddings — few-shot examples baked into system prompt
 
 ---
 

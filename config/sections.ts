@@ -71,11 +71,23 @@ export const SECTIONS: Section[] = [
     systemPromptFile: null,
     suggestedQuestions: [],
   },
+  {
+    id: 'reviews',
+    label: 'Reviews',
+    description: 'Generate review responses for SOLE',
+    parent: null,
+    status: 'active',
+    authRequired: false,
+    escalationContact: null,
+    systemPromptFile: null,
+    suggestedQuestions: [],
+  },
 ]
 
 export const TOP_LEVEL_SECTIONS: TopLevelSection[] = [
   { id: 'hr', label: 'HR', description: 'Get answers to your questions instantly' },
   { id: 'operations', label: 'Operations', description: 'Procedures, standards & guides' },
+  { id: 'reviews', label: 'Reviews', description: 'Generate review responses for SOLE' },
 ]
 
 export function getSectionById(id: string): Section | undefined {

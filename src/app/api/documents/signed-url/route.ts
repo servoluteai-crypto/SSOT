@@ -15,11 +15,22 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createServiceRoleClient()
-    const storagePath = `documents/${sectionId}/${filename}`
+
+    // Look up storage_path by normalizing whitespace in both the query and DB value
+    // This handles filenames with extra spaces in the DB not matching the normalized version
+    const { data: doc, error: docError } = await supabase
+      .rpc('find_document_by_normalized_filename', {
+        p_section_id: sectionId,
+        p_filename: filename,
+      })
+
+    if (docError || !doc || doc.length === 0) {
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+    }
 
     const { data, error } = await supabase.storage
       .from('documents')
-      .createSignedUrl(storagePath, 3600) // 1 hour expiry
+      .createSignedUrl(doc[0].storage_path, 3600) // 1 hour expiry
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

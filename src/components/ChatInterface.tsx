@@ -15,6 +15,7 @@ export function ChatInterface({ section }: ChatInterfaceProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [pdfFilename, setPdfFilename] = useState<string>('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -81,6 +82,7 @@ export function ChatInterface({ section }: ChatInterfaceProps) {
       )
       if (!res.ok) throw new Error('Failed to get document URL')
       const { url } = await res.json()
+      setPdfFilename(documentName)
       setPdfUrl(url)
     } catch {
       alert('Could not load document. Please try again.')
@@ -182,7 +184,7 @@ export function ChatInterface({ section }: ChatInterfaceProps) {
                   How can I help?
                 </h2>
                 <p style={{ fontSize: '13.5px', color: 'var(--muted)' }}>
-                  Ask any question — I'll find the answer from our documents.
+                  Ask any question — I&apos;ll find the answer from our documents.
                 </p>
               </div>
 
@@ -427,7 +429,7 @@ export function ChatInterface({ section }: ChatInterfaceProps) {
 
       {/* PDF Viewer Modal */}
       {pdfUrl && (
-        <PdfViewerModal url={pdfUrl} onClose={() => setPdfUrl(null)} />
+        <PdfViewerModal url={pdfUrl} filename={pdfFilename} onClose={() => setPdfUrl(null)} />
       )}
     </div>
   )

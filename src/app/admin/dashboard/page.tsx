@@ -46,6 +46,7 @@ export default function AdminDashboardPage() {
       const res = await fetch('/api/admin/dashboard')
       const data = await res.json()
       if (Array.isArray(data)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setStats(data.map((stat: any) => ({
           sectionId: stat.section_id,
           label: SECTIONS.find((s) => s.id === stat.section_id)?.label || stat.section_id,

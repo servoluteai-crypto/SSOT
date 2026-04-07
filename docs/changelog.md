@@ -6,6 +6,18 @@ Format: `[YYYY-MM-DD] — Description`
 
 ---
 
+## [2026-03-26] — Review Response Generator module
+
+### Added
+- New `/reviews` page — managers paste a customer review, select Karlo or Victor as the responding voice, and get a draft response
+- `POST /api/review-response` — loads system prompt from `review_prompts` Supabase table (or local file fallback), injects reviewer name, calls Claude Haiku, returns draft
+- `review_prompts` DB table — stores full few-shot system prompts per manager voice, auto-seeded from `config/prompts/reviews-karlo.txt` and `config/prompts/reviews-victor.txt` on first use
+- Two system prompt files with 15 (Karlo) and 10 (Victor) real curated training examples
+- Reviews added to home page navigation with dedicated icon
+- `/reviews` route protected by staff PIN auth (same as HR/Operations)
+
+---
+
 ## [2026-03-20] — Smart topic clustering for analytics
 
 ### Changed
