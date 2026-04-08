@@ -155,7 +155,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             borderBottom: '1px solid var(--border)',
           }}
         >
-          <img src="/logo.svg" alt="EHL Experiences" style={{ width: '130px', height: 'auto' }} />
+          <img src="/logo.png" alt="EHL Experiences" style={{ width: '130px', height: 'auto' }} />
           <div
             style={{
               marginTop: '10px',
@@ -232,7 +232,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="md:hidden fixed top-0 left-0 right-0 z-40" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="EHL" style={{ width: '90px', height: 'auto' }} />
+            <img src="/logo.png" alt="EHL" style={{ width: '90px', height: 'auto' }} />
             <span style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Admin</span>
           </div>
           <button
