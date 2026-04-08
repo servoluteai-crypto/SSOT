@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { SECTIONS } from '../../../../config/sections'
 
 const inputStyle: React.CSSProperties = {
@@ -88,25 +87,13 @@ export default function AdminPromptsPage() {
   const loadPrompt = useCallback(async () => {
     setLoading(true)
     setStatus(null)
-    const supabase = createClient()
-    const { data: doc } = await supabase
-      .from('documents')
-      .select('system_prompt, uploaded_at')
-      .eq('section_id', selectedSection)
-      .eq('is_active', true)
-      .order('uploaded_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (doc?.system_prompt) {
-      setActivePrompt(doc.system_prompt)
-      setLastEdited(doc.uploaded_at)
-    } else {
-      try {
-        const res = await fetch(`/api/admin/prompt?sectionId=${selectedSection}`)
-        const data = await res.json()
-        setActivePrompt(data.prompt || '')
-      } catch { setActivePrompt('') }
+    try {
+      const res = await fetch(`/api/admin/prompt?sectionId=${selectedSection}`)
+      const data = await res.json()
+      setActivePrompt(data.prompt || '')
+      setLastEdited(data.lastEdited || null)
+    } catch {
+      setActivePrompt('')
       setLastEdited(null)
     }
     setDraftPrompt('')
@@ -117,18 +104,21 @@ export default function AdminPromptsPage() {
 
   async function handleSave() {
     setSaving(true)
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('documents')
-      .update({ system_prompt: activePrompt })
-      .eq('section_id', selectedSection)
-      .eq('is_active', true)
-
-    setStatus(error
-      ? { type: 'error', msg: 'Failed to save prompt.' }
-      : { type: 'success', msg: 'Prompt saved.' }
-    )
-    if (!error) setLastEdited(new Date().toISOString())
+    try {
+      const res = await fetch('/api/admin/prompt', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sectionId: selectedSection, prompt: activePrompt }),
+      })
+      const data = await res.json()
+      setStatus(data.error
+        ? { type: 'error', msg: 'Failed to save prompt.' }
+        : { type: 'success', msg: 'Prompt saved.' }
+      )
+      if (!data.error) setLastEdited(new Date().toISOString())
+    } catch {
+      setStatus({ type: 'error', msg: 'Failed to save prompt.' })
+    }
     setSaving(false)
   }
 
