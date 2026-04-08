@@ -14,12 +14,13 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceRoleClient()
 
-  // Try Supabase first (service role — bypasses RLS)
+  // Try Supabase first — find whichever active doc has the prompt set
   const { data: doc } = await supabase
     .from('documents')
     .select('system_prompt, uploaded_at')
     .eq('section_id', sectionId)
     .eq('is_active', true)
+    .not('system_prompt', 'is', null)
     .order('uploaded_at', { ascending: false })
     .limit(1)
     .single()
