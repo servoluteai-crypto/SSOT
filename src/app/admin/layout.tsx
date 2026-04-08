@@ -117,8 +117,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
-  // Login page — no chrome
-  if (pathname === '/admin') {
+  // Login + reset password pages — no chrome
+  if (pathname === '/admin' || pathname === '/admin/reset-password') {
     return <>{children}</>
   }
 
