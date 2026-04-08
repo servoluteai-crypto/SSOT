@@ -14,19 +14,15 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceRoleClient()
 
-  // Try Supabase first — find whichever active doc has the prompt set
-  const { data: doc } = await supabase
-    .from('documents')
-    .select('system_prompt, uploaded_at')
+  // Load from section_prompts — one row per section, independent of documents
+  const { data: row } = await supabase
+    .from('section_prompts')
+    .select('system_prompt, updated_at')
     .eq('section_id', sectionId)
-    .eq('is_active', true)
-    .not('system_prompt', 'is', null)
-    .order('uploaded_at', { ascending: false })
-    .limit(1)
     .single()
 
-  if (doc?.system_prompt) {
-    return NextResponse.json({ prompt: doc.system_prompt, lastEdited: doc.uploaded_at })
+  if (row?.system_prompt) {
+    return NextResponse.json({ prompt: row.system_prompt, lastEdited: row.updated_at })
   }
 
   // Fall back to prompt file if no DB entry
@@ -55,10 +51,11 @@ export async function PATCH(request: NextRequest) {
     const supabase = createServiceRoleClient()
 
     const { error } = await supabase
-      .from('documents')
-      .update({ system_prompt: prompt })
-      .eq('section_id', sectionId)
-      .eq('is_active', true)
+      .from('section_prompts')
+      .upsert(
+        { section_id: sectionId, system_prompt: prompt, updated_at: new Date().toISOString() },
+        { onConflict: 'section_id' }
+      )
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

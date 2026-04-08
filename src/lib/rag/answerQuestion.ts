@@ -18,18 +18,15 @@ function getAnthropic() {
 async function getSystemPrompt(sectionId: string): Promise<string> {
   const supabase = createServiceRoleClient()
 
-  // Try database first (active document's system_prompt)
-  const { data: doc } = await supabase
-    .from('documents')
+  // Try section_prompts — one row per section, independent of documents
+  const { data: row } = await supabase
+    .from('section_prompts')
     .select('system_prompt')
     .eq('section_id', sectionId)
-    .eq('is_active', true)
-    .order('uploaded_at', { ascending: false })
-    .limit(1)
     .single()
 
-  if (doc?.system_prompt) {
-    return doc.system_prompt
+  if (row?.system_prompt) {
+    return row.system_prompt
   }
 
   // Fallback to file
