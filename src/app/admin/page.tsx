@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <img src="/logo.svg" alt="EHL Experiences" style={{ width: '180px', height: 'auto', margin: '0 auto' }} />
+          <img src="/logo.png" alt="EHL Experiences" style={{ width: '180px', height: 'auto', margin: '0 auto' }} />
           <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <div style={{ width: '24px', height: '1px', background: 'rgba(201,168,76,0.4)' }} />
             <span style={{ fontSize: '10px', color: 'rgba(240,237,230,0.4)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
