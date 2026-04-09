@@ -71,10 +71,16 @@ function GhostButton({ onClick, children }: { onClick?: () => void; children: Re
   )
 }
 
+const REVIEW_MANAGERS = [
+  { id: 'karlo', label: 'Karlo' },
+  { id: 'victor', label: 'Victor' },
+]
+
 export default function AdminPromptsPage() {
   const [selectedSection, setSelectedSection] = useState(
     SECTIONS.filter((s) => s.status === 'active')[0]?.id || ''
   )
+  const [selectedManager, setSelectedManager] = useState('karlo')
   const [activePrompt, setActivePrompt] = useState('')
   const [draftPrompt, setDraftPrompt] = useState('')
   const [saving, setSaving] = useState(false)
@@ -83,12 +89,16 @@ export default function AdminPromptsPage() {
   const [lastEdited, setLastEdited] = useState<string | null>(null)
 
   const activeSections = SECTIONS.filter((s) => s.status === 'active')
+  const isReviews = selectedSection === 'reviews'
 
   const loadPrompt = useCallback(async () => {
     setLoading(true)
     setStatus(null)
     try {
-      const res = await fetch(`/api/admin/prompt?sectionId=${selectedSection}`)
+      const url = isReviews
+        ? `/api/admin/prompt?sectionId=reviews&manager=${selectedManager}`
+        : `/api/admin/prompt?sectionId=${selectedSection}`
+      const res = await fetch(url)
       const data = await res.json()
       setActivePrompt(data.prompt || '')
       setLastEdited(data.lastEdited || null)
@@ -98,17 +108,20 @@ export default function AdminPromptsPage() {
     }
     setDraftPrompt('')
     setLoading(false)
-  }, [selectedSection])
+  }, [selectedSection, selectedManager, isReviews])
 
   useEffect(() => { loadPrompt() }, [loadPrompt])
 
   async function handleSave() {
     setSaving(true)
     try {
+      const body = isReviews
+        ? { sectionId: 'reviews', manager: selectedManager, prompt: activePrompt }
+        : { sectionId: selectedSection, prompt: activePrompt }
       const res = await fetch('/api/admin/prompt', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sectionId: selectedSection, prompt: activePrompt }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       setStatus(data.error
@@ -168,6 +181,31 @@ export default function AdminPromptsPage() {
           )
         })}
       </div>
+
+      {/* Manager sub-selector for Reviews */}
+      {isReviews && (
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+          {REVIEW_MANAGERS.map((m) => {
+            const isActive = selectedManager === m.id
+            return (
+              <button
+                key={m.id}
+                onClick={() => setSelectedManager(m.id)}
+                style={{
+                  padding: '6px 16px', borderRadius: '8px', fontSize: '12.5px',
+                  fontWeight: isActive ? 500 : 400,
+                  background: isActive ? 'rgba(240,237,230,0.08)' : 'transparent',
+                  color: isActive ? 'var(--foreground)' : 'var(--muted)',
+                  border: isActive ? '1px solid rgba(240,237,230,0.2)' : '1px solid var(--border)',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                }}
+              >
+                {m.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {loading ? (
         <p style={{ fontSize: '14px', color: 'var(--muted)', paddingTop: '10px' }}>Loading…</p>

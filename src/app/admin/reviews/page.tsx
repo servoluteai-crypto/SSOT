@@ -22,6 +22,14 @@ type ReviewAnalytics = {
     final_response: string
     edit_distance: number
   }[]
+  notUsefulLogs: {
+    id: string
+    created_at: string
+    manager: string
+    review_text: string
+    generated_response: string
+    not_useful_reason: string | null
+  }[]
 }
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
@@ -84,6 +92,59 @@ function EditRow({ log }: { log: ReviewAnalytics['recentEdits'][0] }) {
               <p style={{ fontSize: '10px', color: 'var(--ehl-gold)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Final (used)</p>
               <p style={{ fontSize: '12.5px', color: 'var(--foreground)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{log.final_response}</p>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NotUsefulRow({ log }: { log: ReviewAnalytics['notUsefulLogs'][0] }) {
+  const [expanded, setExpanded] = useState(false)
+  const date = new Date(log.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const managerLabel = log.manager === 'karlo' ? 'Karlo' : 'Victor'
+
+  return (
+    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{ width: '100%', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+      >
+        <span style={{ fontSize: '11px', color: 'var(--muted)', minWidth: '52px', flexShrink: 0 }}>{date}</span>
+        <span style={{
+          fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '5px',
+          background: 'rgba(201,168,76,0.1)', color: 'var(--ehl-gold)',
+          border: '1px solid rgba(201,168,76,0.2)', flexShrink: 0,
+        }}>
+          {managerLabel}
+        </span>
+        <p style={{ flex: 1, fontSize: '13px', color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+          {log.review_text}
+        </p>
+        {log.not_useful_reason && (
+          <span style={{
+            fontSize: '11px', padding: '2px 8px', borderRadius: '5px', flexShrink: 0,
+            background: 'rgba(220,60,60,0.1)', color: '#e07070',
+            border: '1px solid rgba(220,60,60,0.2)',
+          }}>
+            {log.not_useful_reason}
+          </span>
+        )}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ flexShrink: 0, transition: 'transform 0.15s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {expanded && (
+        <div style={{ borderTop: '1px solid var(--border)', padding: '16px 18px', display: 'grid', gap: '16px' }}>
+          <div>
+            <p style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Review</p>
+            <p style={{ fontSize: '13px', color: 'var(--foreground)', lineHeight: 1.6 }}>{log.review_text}</p>
+          </div>
+          <div>
+            <p style={{ fontSize: '10px', color: '#e07070', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Generated (rejected)</p>
+            <p style={{ fontSize: '12.5px', color: 'var(--muted)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{log.generated_response}</p>
           </div>
         </div>
       )}
@@ -222,6 +283,27 @@ export default function AdminReviewsPage() {
               </div>
             </div>
           )}
+
+          {/* Not useful responses */}
+          <div style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '13px', color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 500, marginBottom: '4px' }}>
+              Not Useful Responses
+            </h2>
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>
+              Responses flagged as unhelpful — use these to improve prompts or fine-tune
+            </p>
+            {data.notUsefulLogs.length === 0 ? (
+              <div style={{ padding: '32px 20px', textAlign: 'center', background: 'rgba(0,0,0,0.12)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                <p style={{ fontSize: '14px', color: 'var(--muted)' }}>No flagged responses yet.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {data.notUsefulLogs.map((log) => (
+                  <NotUsefulRow key={log.id} log={log} />
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Daily trend */}
           {data.byDay.length > 0 && (

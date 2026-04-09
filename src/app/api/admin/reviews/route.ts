@@ -84,6 +84,19 @@ export async function GET(request: NextRequest) {
         edit_distance: r.edit_distance,
       }))
 
+    // Not useful logs — for understanding AI failures
+    const notUsefulLogs = rows
+      .filter((r) => r.not_useful)
+      .slice(0, 50)
+      .map((r) => ({
+        id: r.id,
+        created_at: r.created_at,
+        manager: r.manager,
+        review_text: r.review_text,
+        generated_response: r.generated_response,
+        not_useful_reason: r.not_useful_reason,
+      }))
+
     return NextResponse.json({
       total,
       copied,
@@ -96,6 +109,7 @@ export async function GET(request: NextRequest) {
       byManager,
       byDay,
       recentEdits,
+      notUsefulLogs,
     })
   } catch (error) {
     console.error('Reviews analytics API error:', error)
