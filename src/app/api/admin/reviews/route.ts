@@ -6,15 +6,27 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const days = parseInt(searchParams.get('days') || '30', 10)
     const manager = searchParams.get('manager') || ''
+    const from = searchParams.get('from') || ''
+    const to = searchParams.get('to') || ''
 
     const supabase = createServiceRoleClient()
-    const since = new Date(Date.now() - days * 86400000).toISOString()
+
+    const since = from
+      ? new Date(from).toISOString()
+      : new Date(Date.now() - days * 86400000).toISOString()
+    const until = to
+      ? new Date(new Date(to).getTime() + 86400000).toISOString() // include full end day
+      : null
 
     let query = supabase
       .from('review_response_logs')
       .select('*')
       .gte('created_at', since)
       .order('created_at', { ascending: false })
+
+    if (until) {
+      query = query.lt('created_at', until)
+    }
 
     if (manager) {
       query = query.eq('manager', manager)

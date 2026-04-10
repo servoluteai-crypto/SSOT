@@ -157,16 +157,25 @@ export default function AdminReviewsPage() {
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(30)
   const [managerFilter, setManagerFilter] = useState('')
+  const [customMode, setCustomMode] = useState(false)
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams({ days: String(days) })
+    const params = new URLSearchParams()
+    if (customMode && fromDate && toDate) {
+      params.set('from', fromDate)
+      params.set('to', toDate)
+    } else {
+      params.set('days', String(days))
+    }
     if (managerFilter) params.set('manager', managerFilter)
     const res = await fetch(`/api/admin/reviews?${params}`)
     const json = await res.json()
     if (!json.error) setData(json)
     setLoading(false)
-  }, [days, managerFilter])
+  }, [days, managerFilter, customMode, fromDate, toDate])
 
   useEffect(() => { load() }, [load])
 
@@ -188,9 +197,9 @@ export default function AdminReviewsPage() {
 
         <div style={{ display: 'flex', gap: '4px' }}>
           {[7, 30, 90].map((d) => {
-            const isActive = days === d
+            const isActive = !customMode && days === d
             return (
-              <button key={d} onClick={() => setDays(d)} style={{
+              <button key={d} onClick={() => { setCustomMode(false); setDays(d) }} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px',
                 fontWeight: isActive ? 500 : 400,
                 background: isActive ? 'rgba(201,168,76,0.12)' : 'transparent',
@@ -202,7 +211,49 @@ export default function AdminReviewsPage() {
               </button>
             )
           })}
+          <button onClick={() => setCustomMode(!customMode)} style={{
+            padding: '8px 14px', borderRadius: '8px', fontSize: '13px',
+            fontWeight: customMode ? 500 : 400,
+            background: customMode ? 'rgba(201,168,76,0.12)' : 'transparent',
+            color: customMode ? 'var(--ehl-gold)' : 'var(--muted)',
+            border: customMode ? '1px solid rgba(201,168,76,0.3)' : '1px solid var(--border)',
+            cursor: 'pointer', transition: 'all 0.15s',
+          }}>
+            Custom
+          </button>
         </div>
+
+        {customMode && (
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              style={{ padding: '7px 10px', borderRadius: '8px', fontSize: '13px', background: 'var(--card)', color: 'var(--foreground)', border: '1px solid var(--border)', cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>to</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              style={{ padding: '7px 10px', borderRadius: '8px', fontSize: '13px', background: 'var(--card)', color: 'var(--foreground)', border: '1px solid var(--border)', cursor: 'pointer' }}
+            />
+            <button
+              onClick={load}
+              disabled={!fromDate || !toDate}
+              style={{
+                padding: '7px 14px', borderRadius: '8px', fontSize: '13px',
+                background: fromDate && toDate ? 'rgba(201,168,76,0.12)' : 'transparent',
+                color: fromDate && toDate ? 'var(--ehl-gold)' : 'var(--muted)',
+                border: '1px solid rgba(201,168,76,0.3)',
+                cursor: fromDate && toDate ? 'pointer' : 'default',
+                transition: 'all 0.15s',
+              }}
+            >
+              Apply
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
