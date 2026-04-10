@@ -19,6 +19,8 @@ export default function ReviewsPage() {
   const [notUsefulLogged, setNotUsefulLogged] = useState(false)
   const [showReasonPicker, setShowReasonPicker] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
+  const [customReason, setCustomReason] = useState('')
+  const [showCustomInput, setShowCustomInput] = useState(false)
 
   const canGenerate = reviewerName.trim() && reviewText.trim() && !loading
 
@@ -50,6 +52,8 @@ export default function ReviewsPage() {
     setNotUsefulLogged(false)
     setShowReasonPicker(false)
     setFeedbackSubmitted(false)
+    setCustomReason('')
+    setShowCustomInput(false)
 
     try {
       const res = await fetch('/api/review-response', {
@@ -377,7 +381,7 @@ export default function ReviewsPage() {
                   <p style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 500, marginBottom: '12px' }}>
                     What was the issue?
                   </p>
-                  {(['Too formal', 'Too casual', 'Missed the point', 'Factually wrong'] as const).map(reason => (
+                  {(['Too formal', 'Too casual', 'Missed the point', 'Factually wrong', 'Wrong length', 'Wrong tone for review type'] as const).map(reason => (
                     <button
                       key={reason}
                       onClick={() => handleReasonSelect(reason)}
@@ -407,6 +411,76 @@ export default function ReviewsPage() {
                       {reason}
                     </button>
                   ))}
+
+                  {showCustomInput ? (
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder="Describe the issue…"
+                        value={customReason}
+                        onChange={e => setCustomReason(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && customReason.trim()) handleReasonSelect(customReason.trim())
+                          if (e.key === 'Escape') setShowCustomInput(false)
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '9px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(201,168,76,0.4)',
+                          background: 'white',
+                          fontSize: '14px',
+                          color: '#1a1a18',
+                          outline: 'none',
+                        }}
+                      />
+                      <button
+                        onClick={() => { if (customReason.trim()) handleReasonSelect(customReason.trim()) }}
+                        disabled={!customReason.trim()}
+                        style={{
+                          padding: '9px 14px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(201,168,76,0.4)',
+                          background: customReason.trim() ? 'rgba(201,168,76,0.1)' : 'white',
+                          color: customReason.trim() ? 'var(--ehl-gold)' : '#aaa',
+                          fontSize: '13px',
+                          cursor: customReason.trim() ? 'pointer' : 'default',
+                        }}
+                      >
+                        Submit
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowCustomInput(true)}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1px dashed rgba(0,0,0,0.15)',
+                        background: 'white',
+                        color: '#888',
+                        fontSize: '14px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        marginBottom: '8px',
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = 'var(--ehl-gold)'
+                        e.currentTarget.style.color = '#555'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'
+                        e.currentTarget.style.color = '#888'
+                      }}
+                    >
+                      Other — type your own…
+                    </button>
+                  )}
+
                   <button
                     onClick={handleReasonDismiss}
                     style={{
